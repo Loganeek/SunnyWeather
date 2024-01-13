@@ -444,22 +444,3 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
-DEV Community — A constructive and inclusive social network for software developers. With you every step of your journey.
-
-Home
-Podcasts
-Videos
-Tags
-FAQ
-Forem Shop
-Advertise on DEV
-About
-Contact
-Guides
-Software comparisons
-Code of Conduct
-Privacy Policy
-Terms of use
-Built on Forem — the open source software that powers DEV and other inclusive communities.
-
-Made with love and Ruby on Rails. DEV Community © 2016 - 2024.
