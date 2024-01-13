@@ -1,10 +1,10 @@
 name: Build
 
 on:
-  push:
-    branches: [ main ] # Just in case main was not up to date while merging PR
-  pull_request:
-    types: [ opened, synchronize ]
+  # push:
+  #   branches: [ main ] # Just in case main was not up to date while merging PR
+  # pull_request:
+  #   types: [ opened, synchronize ]
   workflow_dispatch:
     inputs:
       name:
