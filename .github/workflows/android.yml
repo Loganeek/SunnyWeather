@@ -1,0 +1,51 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: 🏭 set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'adopt'
+        cache: gradle
+
+
+    - name: 🔐 Decode Keystore
+      env:
+        ENCODED_STRING: ${{ secrets.KEYSTORE }}
+      run: |
+        TMP_KEYSTORE_FILE_PATH="${RUNNER_TEMP}"/keystore
+        mkdir "${TMP_KEYSTORE_FILE_PATH}"
+        echo $ENCODED_STRING | base64 -di > "${TMP_KEYSTORE_FILE_PATH}"/keystore_file.jks
+      
+    - name: 🏭 Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: 🔨️ Build with Gradle
+      run: ./gradlew app:assembleRelease
+      env:
+        SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+        SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+      
+      # Upload unsigned release APK
+    - name: 📦 Upload apks
+      uses: actions/upload-artifact@v3
+      with:
+        name: apk
+        path: |
+          **/release/*.apk
+          **/release/*.aab
+        retention-days: 5

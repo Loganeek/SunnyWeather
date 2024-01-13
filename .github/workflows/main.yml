@@ -1,0 +1,160 @@
+name: Build
+
+on:
+  # push:
+  #   branches: [ main ] # Just in case main was not up to date while merging PR
+  # pull_request:
+  #   types: [ opened, synchronize ]
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Person to greet'
+        required: true
+        default: 'World'
+
+jobs:
+  build-and-test:
+    name: Build, Lint and Test
+    runs-on: macos-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up our JDK environment
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '11'
+
+      - name: Cache Gradle and wrapper
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            chmod +x gradlew
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # Decode Google services configuration file from secrets
+      # - name: Decode google-services.json
+      #  env:
+      #    FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
+      #  run: echo $FIREBASE_CONFIG > app/google-services.json
+
+      # Run emulator
+      - name: Run integration test on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          script: ./gradlew createDebugCoverageReport --stacktrace
+
+      # Generate jacoco report
+      - name: Generate report
+        run: ./gradlew jacocoTestReport
+
+      # Upload report
+      - name: Upload Reports
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: reports
+          path: |
+            /build/coverage-report
+            app/build/reports
+
+      # Upload coverage report to Codacy
+      - name: Run codacy-coverage-reporter
+        uses: codacy/codacy-coverage-reporter-action@v1
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+
+  static-analysis:
+    name: Execute analyse on code
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up our JDK environment
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '11'
+
+      - name: Cache Gradle and wrapper
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # Check the code with detekt, you can remove this job if you don't use detekt
+      - name: Run detekt Linter
+        run: ./gradlew detekt
+
+      # Check the code with ktlint, you can remove this job if you don't use ktlint
+      - name: Run Kotlin Linter
+        run: ./gradlew ktlintCheck
+
+      # Check the code with Android linter (need assemble)
+      - name: Run Android Linter
+        run: ./gradlew lint
+
+      # Check the code with Spotless
+      - name: Run Spotless
+        run: ./gradlew spotlessCheck
+
+  generate-release-apk:
+    name: Try generate Releasable
+    runs-on: ubuntu-latest
+    environment: Release
+    timeout-minutes: 20
+    needs:
+      - build-and-test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set up our JDK environment
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '11'
+
+      - name: Decode Keystore
+        env:
+          ENCODED_STRING: ${{ secrets.KEYSTORE }}
+        run: |
+          TMP_KEYSTORE_FILE_PATH="${RUNNER_TEMP}"/keystore
+          mkdir "${TMP_KEYSTORE_FILE_PATH}"
+          echo $ENCODED_STRING | base64 -di > "${TMP_KEYSTORE_FILE_PATH}"/keystore_file.jks
+
+      - name: Cache Gradle and wrapper
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Build Release
+        run: ./gradlew app:assembleRelease
+        env:
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
