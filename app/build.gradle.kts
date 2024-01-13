@@ -24,8 +24,7 @@ android {
     signingConfigs {
         create("release"){
             // use in git workflow
-            System.out.println(System.getProperty("RUNNER_TEMP"))
-            storeFile = file(System.getProperty("RUNNER_TEMP") + "/keystore/keystore_file.jks")
+            storeFile = file("keystore/keystore_file.jks")
             storePassword = System.getenv("SIGNING_STORE_PASSWORD")
             keyAlias = System.getenv("SIGNING_KEY_ALIAS")
             keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
