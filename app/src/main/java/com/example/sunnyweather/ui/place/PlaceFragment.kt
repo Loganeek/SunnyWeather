@@ -15,7 +15,7 @@ class PlaceFragment : Fragment(){
 
     private lateinit var binding: FragmentPlaceBinding
 
-    val viewModel by lazy { ViewModelProvider(this)[PlaceViewModel::class.java] }
+    private val viewModel by lazy { ViewModelProvider(this)[PlaceViewModel::class.java] }
 
     private lateinit var adapter: PlaceAdapter
 
