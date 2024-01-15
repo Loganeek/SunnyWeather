@@ -1,17 +1,18 @@
 package com.example.sunnyweather.ui.weather
 
+import android.content.Context
 import android.graphics.Color
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.view.inputmethod.InputMethodManager
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.lifecycle.Observer
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.ViewModelProvider
 import com.example.sunnyweather.R
 import com.example.sunnyweather.databinding.ActivityWeatherBinding
@@ -21,11 +22,12 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 open class WeatherActivity : AppCompatActivity() {
-    private val TAG = "WeatherActivity"
-    private val viewModel by lazy { ViewModelProvider(this)[WeatherViewModel::class.java] }
+//    private val TAG = "WeatherActivity"
+    val viewModel by lazy { ViewModelProvider(this)[WeatherViewModel::class.java] }
 
     private lateinit var binding: ActivityWeatherBinding
 
+    @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val decorView = window.decorView
@@ -49,16 +51,48 @@ open class WeatherActivity : AppCompatActivity() {
 
         viewModel.weatherLiveData.observe(this) { result ->
             val weather = result.getOrNull()
-            Log.e(TAG, "onCreate: $weather")
             if (weather != null) {
                 showWeatherInfo(weather)
             } else {
                 Toast.makeText(this, "无法获取天气信息", Toast.LENGTH_SHORT).show()
                 result.exceptionOrNull()?.printStackTrace()
+
+                binding.swipeRefresh.isRefreshing = false
             }
         }
+        binding.swipeRefresh.setColorSchemeResources(com.google.android.material.R.color.design_default_color_primary)
 
+        refreshWeather()
+        binding.swipeRefresh.setOnRefreshListener {
+            refreshWeather()
+        }
+
+        val navBtn = binding.root.findViewById<Button>(R.id.navBtn)
+        navBtn.setOnClickListener{
+            binding.drawerLayout.openDrawer(GravityCompat.START)
+        }
+
+        binding.drawerLayout.addDrawerListener(object: DrawerLayout.DrawerListener{
+            override fun onDrawerSlide(drawerView: View, slideOffset: Float) {
+                val manager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                manager.hideSoftInputFromWindow(drawerView.windowToken, InputMethodManager.HIDE_NOT_ALWAYS)
+            }
+
+            override fun onDrawerOpened(drawerView: View) {
+            }
+
+            override fun onDrawerClosed(drawerView: View) {
+            }
+
+            override fun onDrawerStateChanged(newState: Int) {
+            }
+        })
+
+    }
+
+    fun refreshWeather(){
         viewModel.refreshWeather(viewModel.locationLng, viewModel.locationLat)
+        binding.swipeRefresh.isRefreshing = false
     }
 
     private fun showWeatherInfo(weather: Weather) {
